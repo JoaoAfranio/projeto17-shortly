@@ -40,8 +40,7 @@ export async function findUserByToken(req, res) {
   try {
     const selectUser = await db.query(
       `
-    SELECT users.id, name, 
-      (SELECT sum(visit_count) FROM shorten_links WHERE id_user = $1)::int as "visitCount",
+    SELECT users.id, name, sum(visit_count)::int as "visitCount",
       json_agg(
         json_build_object(
         'id', links.id,

@@ -59,3 +59,22 @@ export async function deleteUrlByID(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function rankingUsers(req, res) {
+  try {
+    const selectUsers = await db.query(`
+      SELECT users.id, name, 
+        COALESCE(sum(visit_count)::int, 0) as "visitCount",
+        count(links)::int as "linksCount"
+        FROM users
+        LEFT JOIN shorten_links as links on users.id = links.id_user
+        GROUP BY users.id
+        ORDER BY "visitCount" DESC
+        LIMIT 10;`);
+
+    res.status(200).send(selectUsers.rows);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
