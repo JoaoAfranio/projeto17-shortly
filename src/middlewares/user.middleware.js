@@ -1,4 +1,3 @@
-import { login, register } from "../schemas/user.js";
 import bcrypt from "bcrypt";
 import db from "../database/db.js";
 
@@ -33,6 +32,27 @@ export async function loginValidation(req, res, next) {
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
+  }
+
+  next();
+}
+
+export async function tokenAuthentication(req, res, next) {
+  const { authorization } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
+
+  if (!token) return res.sendStatus(401);
+
+  try {
+    const selectSession = await db.query("SELECT * FROM sessions WHERE token = $1", [token]);
+    if (selectSession.rowCount === 0) return res.sendStatus(401);
+
+    const session = selectSession.rows[0];
+
+    res.locals.session = session;
+  } catch (err) {
+    console.log(err);
+    return res.sendStatus(500);
   }
 
   next();
