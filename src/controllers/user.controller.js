@@ -33,3 +33,33 @@ export async function login(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function findUserByToken(req, res) {
+  const session = res.locals.session;
+
+  try {
+    const selectUser = await db.query(
+      `
+    SELECT users.id, name, 
+      (SELECT sum(visit_count) FROM shorten_links WHERE id_user = $1)::int as "visitCount",
+      json_agg(
+        json_build_object(
+        'id', links.id,
+        'shortUrl', short_url,
+        'url', url,
+        'visitCount', visit_count
+        )
+      ) as "shortenedUrls"
+      FROM users
+      JOIN shorten_links as links on users.id = links.id_user
+      WHERE users.id = $1
+      GROUP BY users.id;`,
+      [session.id_user]
+    );
+
+    res.status(200).send(selectUser.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
