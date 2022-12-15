@@ -47,3 +47,15 @@ export async function openURLbyID(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function deleteUrlByID(req, res) {
+  const id = req.params.id;
+
+  try {
+    await db.query("DELETE FROM shorten_links WHERE id = $1", [id]);
+    return res.sendStatus(204);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
