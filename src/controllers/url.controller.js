@@ -8,10 +8,10 @@ export async function insertShortenURL(req, res) {
 
   try {
     await db.query("INSERT INTO shorten_links (id_user, short_url, url) VALUES ($1, $2, $3)", [session.id_user, shortUrl, url]);
-    return res.status(201).send({ shortUrl });
+    res.status(201).send({ shortUrl });
   } catch (err) {
     console.log(err);
-    return res.sendStatus(500);
+    res.sendStatus(500);
   }
 }
 
@@ -23,6 +23,25 @@ export async function findShortenURLbyID(req, res) {
     if (selectShortUrl.rowCount === 0) return res.sendStatus(404);
 
     res.status(200).send(selectShortUrl.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
+
+export async function openURLbyID(req, res) {
+  const shortUrl = req.params.shortUrl;
+
+  try {
+    const selectShortUrl = await db.query("SELECT id, visit_count, url FROM shorten_links where short_url = $1", [shortUrl]);
+    if (selectShortUrl.rowCount === 0) return res.sendStatus(404);
+
+    const infoUrl = selectShortUrl.rows[0];
+    const visitCount = infoUrl.visit_count + 1;
+
+    await db.query("UPDATE shorten_links SET visit_count = $1 WHERE id = $2", [visitCount, infoUrl.id]);
+
+    res.redirect(infoUrl.url);
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
