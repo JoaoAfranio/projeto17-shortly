@@ -17,7 +17,7 @@ export async function loginValidation(req, res, next) {
   try {
     const selectUser = await db.query("SELECT * FROM users WHERE email = $1", [user.email]);
 
-    if (!selectUser) {
+    if (selectUser.rowCount === 0) {
       return res.sendStatus(401);
     }
 

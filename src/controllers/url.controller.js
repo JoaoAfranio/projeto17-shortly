@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { urlRepository } from "../repositories/url.repository.js";
 import db from "../database/db.js";
 
 export async function insertShortenURL(req, res) {
@@ -7,7 +8,7 @@ export async function insertShortenURL(req, res) {
   const shortUrl = nanoid(8);
 
   try {
-    await db.query("INSERT INTO shorten_links (id_user, short_url, url) VALUES ($1, $2, $3)", [session.id_user, shortUrl, url]);
+    await urlRepository.insertUrl(session.id_user, shortUrl, url);
     res.status(201).send({ shortUrl });
   } catch (err) {
     console.log(err);
@@ -19,7 +20,7 @@ export async function findShortenURLbyID(req, res) {
   const id = req.params.id;
 
   try {
-    const selectShortUrl = await db.query("SELECT id, short_url, url FROM shorten_links WHERE id = $1", [id]);
+    const selectShortUrl = await urlRepository.findUrlById(id);
     if (selectShortUrl.rowCount === 0) return res.sendStatus(404);
 
     res.status(200).send(selectShortUrl.rows[0]);
@@ -33,13 +34,13 @@ export async function openURLbyID(req, res) {
   const shortUrl = req.params.shortUrl;
 
   try {
-    const selectShortUrl = await db.query("SELECT id, visit_count, url FROM shorten_links where short_url = $1", [shortUrl]);
+    const selectShortUrl = await urlRepository.openUrl(shortUrl);
     if (selectShortUrl.rowCount === 0) return res.sendStatus(404);
 
     const infoUrl = selectShortUrl.rows[0];
     const visitCount = infoUrl.visit_count + 1;
 
-    await db.query("UPDATE shorten_links SET visit_count = $1 WHERE id = $2", [visitCount, infoUrl.id]);
+    await urlRepository.sumCountVisit(visitCount, infoUrl.id);
 
     res.redirect(infoUrl.url);
   } catch (err) {
@@ -52,7 +53,7 @@ export async function deleteUrlByID(req, res) {
   const id = req.params.id;
 
   try {
-    await db.query("DELETE FROM shorten_links WHERE id = $1", [id]);
+    await urlRepository.deleteUrlById(id);
     return res.sendStatus(204);
   } catch (err) {
     console.log(err);
@@ -62,15 +63,7 @@ export async function deleteUrlByID(req, res) {
 
 export async function rankingUsers(req, res) {
   try {
-    const selectUsers = await db.query(`
-      SELECT users.id, name, 
-        COALESCE(sum(visit_count)::int, 0) as "visitCount",
-        count(links)::int as "linksCount"
-        FROM users
-        LEFT JOIN shorten_links as links on users.id = links.id_user
-        GROUP BY users.id
-        ORDER BY "visitCount" DESC
-        LIMIT 10;`);
+    const selectUsers = await urlRepository.getRankUsers();
 
     res.status(200).send(selectUsers.rows);
   } catch (err) {
